@@ -1,4 +1,4 @@
-/*
+ /*
 * Universidad Nacional Autónoma de México
 * Facultad de Ingeniería
 * @Date: Diciembre 9, 2019
@@ -42,7 +42,7 @@ int tipoGbl; //Variable global que guarda el tipo de las pseudovariables
 int dirGbl; //Variable global que guarda la dirección de las pseudovariables
 int baseGbl; //Variable global que guarda la base de las pseudovariables
 
-int funcTipo;// Variable que guarda el tipo de una función
+int funcTipo;// Variable que guarda el tipo de una función (Por el momento)
 
 typestack *stackTT; //Variable global de pila de tipos
 symstack *stackTS; //Variable global de pila de símbolos
@@ -57,7 +57,7 @@ char *L, *L1;
 char *I, *I1;
 char *T, *T1;
 
-code *codigoGbl; //¿Dónde se inicializa? Yo lo puse desde un principio
+code * codigoGbl; //¿Dónde se inicializa? Yo lo puse desde un principio
 stringTab *stringT;
 %}
 
@@ -106,6 +106,7 @@ stringTab *stringT;
   struct{
     struct _listParam *lista;
     int num;
+    int tipo;
     int list_argumentos[30][2];
   }argum;
 
@@ -119,17 +120,17 @@ stringTab *stringT;
 };
 
 /* Terminales */
-%token<sval> REGISTRO 
+%token<sval> REGISTRO
 %token<sval> INICIO
 %token<sval> FIN
-%token<sval> TIPO 
+%token<sval> TIPO
 %token<sval> BASE
 %token<sval> ID
 %token<sval> COMA
 %token<sval> PUNTO
 %token<sval> FUNC
 
-%token<num> NUM 
+%token<num> NUM
 
 %token<sval> ENT //Tipo entero
 %token<sval> REAL //Tipo real
@@ -154,17 +155,17 @@ stringTab *stringT;
 %token<sval> LEER
 %token<sval> DEVOLVER
 %token<sval> TERMINAR
-%token<sval> OO
-%token<sval> YY
+%token<sval> OO 
+%token<sval> YY 
 %token<sval> NO
-%token<sval> VERDADERO
-%token<sval> FALSO
+%token<sval> VERDADERO 
+%token<sval> FALSO 
 %token<sval> COMMENT
 %token<sval> SPACE
 
 %token<sval> CADENA
 %token<sval> CARACTER
-%token<sval> NL /*Salto de linea*/
+%token<sval> NL /*salto de linea*/
 
 /* Asociatividad y precedencia */
 %right ASIGNA
@@ -180,12 +181,12 @@ stringTab *stringT;
 %nonassoc SINO
 
 /* Simbolos no terminales */
-%type<sval> lista_var funciones variable arreglo parametros lista_param
+%type<sval> lista_var funciones arreglo
 %type<dec> declaraciones
 %type<tipo> tipo tipo_registro base tipo_arreglo arg tipo_arg param_arr 
-%type<argum> lista_arg argumentos
+%type<argum> lista_arg argumentos parametros lista_param
 %type<lista> sentencias sentencia expresion_booleana relacional
-%type<exp> expresion
+%type<exp> expresion variable
 
 /* Simbolo inicial */
 %start programa
@@ -207,13 +208,13 @@ declaraciones NL funciones
 ;
 
 declaraciones: /*vacia*/ {}
-	     | tipo lista_var NL declaraciones {
-         tipoGbl = $1.tipo;
-         }
-	     | tipo_registro lista_var NL declaraciones {
-         tipoGbl = $1.tipo;
-         }
-         ;
+	     |tipo lista_var NL declaraciones  {
+          tipoGbl = $1.tipo;
+        }
+	     |tipo_registro lista_var NL declaraciones {
+          tipoGbl = $1.tipo;
+        }
+       ;
 
 tipo_registro: REGISTRO  NL INICIO declaraciones NL FIN {
           symtab *ts=crearSymTab(); //Creamos una apuntador a una tabla de simbolos
@@ -238,9 +239,9 @@ tipo_registro: REGISTRO  NL INICIO declaraciones NL FIN {
 }
 ;
 
-tipo: base tipo_arreglo {
+tipo: base tipo_arreglo { 
            baseGbl=$1.tipo; //Guardamos en la variable global el tipo de base
-           $$.tipo=$2.tipo; //Guardamos en la variable tipo el tipo del arreglo
+           $$.tipo=$2.tipo;; //Guardamos en la variable tipo el tipo del arreglo
 }
 ;
 base:  ENT{$$.tipo = 0;} //El 0 representa enteros
@@ -250,82 +251,82 @@ base:  ENT{$$.tipo = 0;} //El 0 representa enteros
       |SIN{$$.tipo = 4;} //El 4 representa sin tipo
 ;
 tipo_arreglo: LCOR NUM RCOR tipo_arreglo {
-    if($2.tipo = 0 && $2.eval > 0){
-      //Creamos una variable tipo type      
-      type *t = crearTipo();
-      //Obtenemos la cima y la guardamos en una var temp
-      typetab *ttaux = getCimaType(stackTT);
-      /*Llenamos sus correspondientes datos*/
-      //Variable que nos servira para asignar el id del tipo correspondiente
-      int n = ttaux->num; 
-      llenarDatosTipo(ttaux,t,n+1,"array",-1,$2.eval,NULL,$4.tipo);
-      /*Insertamos el tipo y asignamos un valor al tipo de 
-      tipo_arreglo, el cual sera el valor entero que 
-      regrese la función insertarTipo()*/
-      $$.tipo=insertarTipo(ttaux,t); 
-    }
-    else{
-      yyerror("El indice tiene que ser entero y mayor que cero");
-    }
-  }
-  | /*vacia*/ {
-    $$.tipo = baseGbl;
-  }
-;
-
-lista_var: lista_var COMA ID {
-  if(buscar(getCimaSym(stackTS),$3.sval)==-1){
-    symbol *s=crearSymbol($3.sval, tipoGbl, dirGbl, 0);
-    insertar(getCimaSym(stackTS),s);
-    dirGbl += getTam(getCimaType(stackTT),tipoGbl);
-  }
-  else
-    yyerror("El identificador ya fue declarado");
+      if($2.tipo = 0 && $2.eval > 0){
+        //Creamos una variable tipo type
+        type *t = crearTipo();
+        //Obtenemos la cima y la guardamos en una var temp
+        typetab *ttaux = getCimaType(stackTT);
+        /*Llenamos sus correspondientes datos*/
+        //Variable que nos servira para asignar el id del tipo correspondiente
+        int n = ttaux->num; 
+        llenarDatosTipo(ttaux,t,n+1,"array",-1,$2.eval,NULL,$4.tipo);
+        /*Insertamos el tipo y asignamos un valor al tipo de 
+        tipo_arreglo, el cual sera el valor entero que 
+        regrese la función insertarTipo()*/
+        $$.tipo=insertarTipo(ttaux,t); 
+      }
+      else{
+        yyerror("El indice tiene que ser entero y mayor que cero\n");
+      }
 }
-	| ID { 
-  if(buscar(getCimaSym(stackTS),$1.sval)==-1){
-    symbol *s=crearSymbol($1.sval, tipoGbl, dirGbl, 0);
-    insertar(getCimaSym(stackTS),s);
-    dirGbl += getTam(getCimaType(stackTT),tipoGbl);
-  }
-  else
-    yyerror("El identificador ya fue declarado");
-  }
-;
+	    | /*vacia*/ {
+        $$.tipo = baseGbl;
+      }
+      ;
 
-funciones: FUNC tipo ID LPAR argumentos RPAR INICIO NL declaraciones sentencias NL FIN NL funciones {
-  if(buscar(stackTS->root,$3.sval)!=-1){//stackTS->root Sería igual a getFondo
-    symbol *s=crearSymbol($3.sval, tipoGbl, -1, 1); //Modificar funcion
-    insertar(stackTS->root,s);
-    pushDir(&stackDirr,dirGbl);
-    funcTipo = $2.tipo;
-    funcReturn = crearTablaListas();
-    dirGbl = 0;
-    symtab *ts=crearSymTab(); //Creamos una apuntador a una tabla de simbolos
-    typetab *tt=crearTypeTab(); //Creamos una apuntador a una tabla de tipos
-    insertarTypeTab(tt,stackTT);
-    insertarSymTab(ts,stackTS);
-    agrega_cuadrupla(codigoGbl,"label","-","-",$3.sval);
-    strcpy(L, newLabel());
-    backpatch($10.next,L,codigoGbl);
-    agrega_cuadrupla(codigoGbl,"label","-","-",L);
-    sacarTypeTab(stackTT);
-    sacarSymTab(stackTS);
-    dirGbl = popDir(&stackDirr);
-    ts=getCimaSym(stackTS);
-    ts->root->params=$5.lista; //No estoy 100% segura
-    if($2.tipo != 4 && funcReturn->root == NULL);
-      yyerror("La funcion no tiene valor de retorno");
-  }
-  else
-    yyerror("El identificador ya fue declarado");
+lista_var: lista_var COMA ID { 
+        if(buscar(getCimaSym(stackTS),$3.sval)==-1){
+          symbol *s=crearSymbol($3.sval, tipoGbl, dirGbl, 0);
+          insertar(getCimaSym(stackTS),s);
+          dirGbl += getTam(getCimaType(stackTT),tipoGbl);
+        }
+        else
+          yyerror("El identificador ya fue declaradoņ\n");
 }
-	 | /*vacia*/{}
-;
+	 | ID {
+        if(buscar(getCimaSym(stackTS),$1.sval)==-1){
+          symbol *s=crearSymbol($1.sval, tipoGbl, dirGbl, 0);
+          insertar(getCimaSym(stackTS),s);
+          dirGbl += getTam(getCimaType(stackTT),tipoGbl);
+        }
+        else
+          yyerror("El identificador ya fue declarado\n");
+}
+   ;
 
-argumentos: lista_arg{
+funciones: FUNC tipo ID LPAR argumentos RPAR INICIO NL declaraciones sentencias NL FIN NL funciones { 
+        if(buscar(stackTS->root,$3.sval)==-1){//stackTS->root Sería igual a getFondo
+          symbol *s=crearSymbol($3.sval, tipoGbl, -1, 1); //Modificar funcion
+          insertar(stackTS->root,s);
+          pushDir(&stackDirr,dirGbl);
+          funcTipo = $2.tipo;
+          funcReturn = NULL;
+          dirGbl = 0;
+          symtab *ts=crearSymTab(); //Creamos una apuntador a una tabla de simbolos
+          typetab *tt=crearTypeTab(); //Creamos una apuntador a una tabla de tipos
+          insertarTypeTab(tt,stackTT);
+          insertarSymTab(ts,stackTS);
+          agrega_cuadrupla(codigoGbl,"label","-","-",$3.sval);
+          strcpy(L, newLabel());
+          backpatch($10.next,L,codigoGbl);
+          agrega_cuadrupla(codigoGbl,"label","-","-",L);
+          sacarTypeTab(stackTT);
+          sacarSymTab(stackTS);
+          dirGbl = popDir(&stackDirr);
+          ts=getCimaSym(stackTS);
+          ts->root->params=$5.lista; //No estoy 100% segura
+          if($2.tipo != 4 && funcReturn->root == NULL);
+            yyerror("La funcion no tiene valor de retorno\n");
+        }
+        else
+            yyerror("El identificador ya fue declarado\n");
+}
+	 | /*vacia*/{printf("---FUNCIONES---");}
+   ;
+
+argumentos: lista_arg {
           //Segun yo lo que tenemos que hacer es nada más igualar las listas
-          $$.lista=$1lista;
+          $$.lista=$1.lista;
           //$$.num = $1.num; //Copia la cantidad de numero de argumentos
           //Esto no es necesario porque las estructuras son iguales
           /*for(int i=0;i<$1.num;i++){ //Copia los argumentos
@@ -333,59 +334,59 @@ argumentos: lista_arg{
               $$.list_argumentos[i][1] = $1.list_argumentos[i][1];
           }*/
         }
-	  | SIN{
-        $$.list=NULL; // Segun yo es así
+    | SIN{
+        $$.lista = NULL; // Segun yo es así
         //$$.num = 0;
       }
 ;
 
 lista_arg: lista_arg arg {
-        $$.list=$1.list;
-        add($$.list,$2.tipo);
+        $$.lista=$1.lista;
+        add($$.lista,$2.tipo);
         $$.num = $1.num; 
         /*  for(int i=0;i<$1.num;i++){ //Copia los argumentos
               $$.list_argumentos[i][0] = $1.list_argumentos[i][0]; //tipo
               $$.list_argumentos[i][1] = $1.list_argumentos[i][1]; //id
           }
           Esto no va aquí como lo entiendo*/
-}
-	 | arg { 
-     $$.list=crearLP();
-     add($$.list,$1.tipo);
+      }
+   | arg { 
+     $$.lista=crearLP();
+     add($$.lista,$1.tipo);
    }
    ;
 
 arg: tipo_arg ID {
-    if(buscar(getCimaSym(stackTS),$2.sval)==-1){
+          if(buscar(getCimaSym(stackTS),$2.sval)==-1){
             symbol *s=crearSymbol($2.sval, tipoGbl, dirGbl, 0);
             insertar(getCimaSym(stackTS),s);
             dirGbl += getTam(getCimaType(stackTT),tipoGbl);
           }
-    else
-      yyerror("El identificador ya fue declarado\n");
-    $$.tipo = $1.tipo;
+          else
+            yyerror("El identificador ya fue declarado\n");
+          $$.tipo = $1.tipo;
 }
 ;
 
 tipo_arg: base param_arr {
-  baseGbl = $1.tipo;
-  $$.tipo = $2.tipo;
+          baseGbl = $1.tipo;
+          $$.tipo = $2.tipo;
 }
 ;
 
 param_arr: LCOR RCOR param_arr {
-  //Creamos una variable type
-  type *t = crearTipo();
-  //Obtenemos la cima y la guardamos en una var temp
-  typetab *ttaux = getCimaType(stackTT);
-  /*Llenamos sus correspondientes datos*/
-  //Variable que nos servira para asignar el id del tipo correspondiente
-  int n = ttaux->num; 
-  llenarDatosTipo(ttaux,t,n+1,"array",-1,0,NULL,$3.tipo);
-  /*Insertamos el tipo y asignamos un valor al tipo de
-  param_arr, el cual será el valor entero que regrese
-  la funcion insertarTipo()*/
-  $$.tipo=insertarTipo(ttaux,t);
+          //Creamos una variable type
+          type *t = crearTipo();
+          //Obtenemos la cima y la guardamos en una var temp
+          typetab *ttaux = getCimaType(stackTT);
+          /*Llenamos sus correspondientes datos*/
+          //Variable que nos servira para asignar el id del tipo correspondiente
+          int n = ttaux->num; 
+          llenarDatosTipo(ttaux,t,n+1,"array",-1,0,NULL,$3.tipo);
+          /*Insertamos el tipo y asignamos un valor al tipo de
+          param_arr, el cual será el valor entero que regrese
+          la funcion insertarTipo()*/
+          $$.tipo=insertarTipo(ttaux,t);
 }
 	 | /*vacia*/{
           $$.tipo = baseGbl;
@@ -395,25 +396,25 @@ param_arr: LCOR RCOR param_arr {
 sentencias: sentencias NL sentencia {
     L=newLabel();
     backpatch($$.next,L,codigoGbl);
-    $$.next=$1.next; //ESTO SI ES CORRECTO?
+    $$.next=$1.next;
 }
 	  | sentencia {
       $$.next=$1.next; //ESTO SI ES CORRECTO?
-    }
-;
+      }
+    ;
 
 sentencia: SI expresion_booleana ENTONCES NL sentencias NL FIN {
       L=newLabel();
-      backpatch($2,L,codigoGbl);
-      $$.next=combinar($2.falsa,$5.next);
+      backpatch($2.verdadera,L,codigoGbl);
+      $$.next=combinarListas($2.falsa,$5.next);
 }
-	 | SI expresion_booleana NL sentencias NL %prec SINO NL sentencias NL FIN {
+	 | SI expresion_booleana NL sentencias NL SINO NL sentencias NL FIN {
        L=newLabel();
        L1=newLabel();
        backpatch($2.verdadera,L,codigoGbl);
        backpatch($2.falsa,L1,codigoGbl);
        $$.next=combinarListas($4.next,$8.next); 
-   }
+}
 	 | MIENTRAS NL expresion_booleana HACER NL sentencias NL FIN {
        L=newLabel();
        L1=newLabel();
@@ -422,14 +423,14 @@ sentencia: SI expresion_booleana ENTONCES NL sentencias NL FIN {
        $$.next=$3.falsa;
        agrega_cuadrupla(codigoGbl,"goto","-","-",L); 
    }
-	 | HACER NL sentencia NL MIENTRASQUE NL expresion_booleana { //Revisar la gramática
+	 | HACER NL sentencia NL MIENTRASQUE expresion_booleana {
        L=newLabel();
        L1=newLabel();
        backpatch($6.verdadera,L,codigoGbl);
        backpatch($3.next,L1,codigoGbl);
        $$.next=$6.falsa;
        agrega_cuadrupla(codigoGbl,"goto","-","-",L); 
-   }
+}
 	 | ID ASIGNA expresion {
        symtab *staux=getCimaSym(stackTS);
          if(buscar(staux,$1.sval)!=-1){
@@ -446,11 +447,11 @@ sentencia: SI expresion_booleana ENTONCES NL sentencias NL FIN {
          }
          $$.next=NULL;
    }
-   | variable ASIGNA expresion{
-     //a=reducir();
-     agrega_cuadrupla(codigoGbl,"=",a,"-",d);
-     $$.next=NULL;
-   }
+
+
+
+
+
 	 | ESCRIBIR expresion {
          //Creamos una variable code
          code *c=crea_code();
@@ -476,12 +477,12 @@ sentencia: SI expresion_booleana ENTONCES NL sentencias NL FIN {
          $$.next= NULL;
    }
 	 | DEVOLVER {
-     if(funcTipo==4){
-       agrega_cuadrupla(codigoGbl,"return","-","-","-");
-     }else{
-       yyerror("La funcion debe retornar algun tipo de valor %d",funcTipo);
-     }
-     $$.next= NULL;
+         if(funcTipo==4){
+           agrega_cuadrupla(codigoGbl,"return","-","-","-");
+         }else{
+           yyerror("La funcion debe retornar algun tipo de valor");
+         }
+         $$.next= NULL;
    }
 	 | DEVOLVER expresion {
          if(funcTipo!=4){
@@ -502,44 +503,44 @@ sentencia: SI expresion_booleana ENTONCES NL sentencias NL FIN {
          $$.next=crearTablaListas();
          agregaLista($$.verdadera,-1,I);
    }
-;
+   ;
 
 expresion_booleana: expresion_booleana OO expresion_booleana {
-        char *L=newLabel();
-        backpatch();
-        $$.verdadera=combinar($1.verdadera,$3.verdadera);
+        L=newLabel();
+        backpatch($1.falsa,L,codigoGbl);
+        $$.verdadera=combinarListas($1.verdadera,$3.verdadera);
         $$.falsa=$3.falsa;
         agrega_cuadrupla(codigoGbl,"label","-","-",L);
 }
 		  | expresion_booleana YY expresion_booleana {
-        char *L=newLabel();
-        backpatch();
+        L=newLabel();
+        backpatch($1.verdadera,L,codigoGbl);
         $$.verdadera=$3.verdadera;
-        $$.falsa=combinar($1.falsa,$3.falsa);
+        $$.falsa=combinarListas($1.falsa,$3.falsa);
         agrega_cuadrupla(codigoGbl,"label","-","-",L);
-      }
+}
 		  | NO expresion_booleana {
         $$.verdadera=$2.falsa;
-        $$.falsa=$2.verdadera;
-      }
+        $$.falsa=$2.verdadera; 
+}
 		  | relacional {
         $$.verdadera=$1.verdadera;
         $$.falsa=$1.falsa;
-      }
+}
 		  | VERDADERO {
         I=newIndex();
         $$.verdadera=crearTablaListas();
         agregaLista($$.verdadera,-1,I);
         agrega_cuadrupla(codigoGbl,"goto","-","-",I);
         $$.falsa=NULL;
-      }
+}
 		  | FALSO {
         I=newIndex();
         $$.verdadera=NULL;
         $$.falsa=crearTablaListas();
         agregaLista($$.falsa,-1,I);
         agrega_cuadrupla(codigoGbl,"goto","-","-",I);
-      }
+}
 ;
 
 relacional: relacional GT relacional {
@@ -559,7 +560,7 @@ relacional: relacional GT relacional {
         agrega_cuadrupla(codigoGbl,">",cadena,cadena1,I);
         agrega_cuadrupla(codigoGbl,"goto","-","-",I1);
 }
-	  | relacional LT relacional {
+    | relacional LT relacional {
         $$.verdadera =  crearTablaListas();
         $$.falsa = crearTablaListas();
         I=newIndex();
@@ -574,7 +575,7 @@ relacional: relacional GT relacional {
         sprintf(cadena, "%d",a1);
         sprintf(cadena1, "%d",a2);
         agrega_cuadrupla(codigoGbl,"<",cadena,cadena1,I);
-        agrega_cuadrupla(codigoGbl,"goto","-","-",I1);   
+        agrega_cuadrupla(codigoGbl,"goto","-","-",I1);        
     }
     | relacional GE relacional {
         $$.verdadera =  crearTablaListas();
@@ -591,7 +592,7 @@ relacional: relacional GT relacional {
         sprintf(cadena, "%d",a1);
         sprintf(cadena1, "%d",a2);
         agrega_cuadrupla(codigoGbl,">=",cadena,cadena1,I);
-        agrega_cuadrupla(codigoGbl,"goto","-","-",I1);  
+        agrega_cuadrupla(codigoGbl,"goto","-","-",I1);   
     }
     | relacional LE relacional {
         $$.verdadera =  crearTablaListas();
@@ -625,7 +626,7 @@ relacional: relacional GT relacional {
         sprintf(cadena, "%d",a1);
         sprintf(cadena1, "%d",a2);
         agrega_cuadrupla(codigoGbl,"==",cadena,cadena1,I);
-        agrega_cuadrupla(codigoGbl,"goto","-","-",I1); 
+        agrega_cuadrupla(codigoGbl,"goto","-","-",I1);  
     }
     | relacional NE relacional {
         $$.verdadera =  crearTablaListas();
@@ -645,12 +646,12 @@ relacional: relacional GT relacional {
         agrega_cuadrupla(codigoGbl,"goto","-","-",I1); 
     }
     | expresion {
-      //relacional.tipo = expresion.tipo
-      $$.tipo=$1.tipo;
-      //relacional.dir = expresion.dir
-      /*Tengo duda aqui, ¿relacional tiene un atrib 
-      dir?*/
-      $$.dir=$1.dir;
+        //relacional.tipo = expresion.tipo
+        $$.tipo=$1.tipo;
+        //relacional.dir = expresion.dir
+        /*Tengo duda aqui, ¿relacional tiene un atrib 
+        dir?*/
+        $$.dir=$1.dir;
     }
     ;
 
@@ -687,7 +688,7 @@ expresion: expresion MAS expresion {
         sprintf(c2,"%d",a2);
         //agregamos la cuadrupla con el código correspondiente
         agrega_cuadrupla(codigoGbl,"-",c1,c2,newTemp());
-   }
+}
 	 | expresion MUL expresion {
         //Obtenemos el tipo más grande de las expresiones
         $$.tipo=max($1.tipo,$3.tipo);
@@ -704,7 +705,7 @@ expresion: expresion MAS expresion {
         sprintf(c2,"%d",a2);
         //agregamos la cuadrupla con el código correspondiente
         agrega_cuadrupla(codigoGbl,"*",c1,c2,newTemp());
-   }
+}
 	 | expresion DIV expresion {
         //Obtenemos el tipo más grande de las expresiones
         $$.tipo=max($1.tipo,$3.tipo);
@@ -721,7 +722,7 @@ expresion: expresion MAS expresion {
         sprintf(c2,"%d",a2);
         //agregamos la cuadrupla con el código correspondiente
         agrega_cuadrupla(codigoGbl,"/",c1,c2,newTemp());
-   }
+}
 	 | expresion MOD expresion {
         //Obtenemos el tipo más grande de las expresiones
         $$.tipo=max($1.tipo,$3.tipo);
@@ -740,9 +741,9 @@ expresion: expresion MAS expresion {
         agrega_cuadrupla(codigoGbl,"%",c1,c2,newTemp());
    }
 	 | LPAR expresion RPAR {
-     $$.dir=$2.dir;
-     //Asignamos valor al tipo del encabezado
-     $$.tipo=$2.tipo;
+        $$.dir=$2.dir;
+        //Asignamos valor al tipo del encabezado
+        $$.tipo=$2.tipo;
    }
 	 | variable {
         $$.dir=8;
@@ -752,8 +753,8 @@ expresion: expresion MAS expresion {
         agrega_cuadrupla(codigoGbl,"*",cadena,"-",newTemp()); 
    }
 	 | NUM {
-     $$.tipo=$1.tipo;
-     $$.dir=$1.cval;
+        $$.tipo=$1.tipo;
+        $$.dir=$1.cval;
    }
 	 | CADENA {
        /*Se realiza esta acción semantica
@@ -766,18 +767,18 @@ expresion: expresion MAS expresion {
        $$.dir=strlen($1.sval);
    }
 	 | CARACTER {
-     $$.tipo = $1;
-    /*expresion.dir = TablaDeCadenas.add(cadena)*/
-    char *chain=creaCadena($1.sval);
-    /*La misma duda que en lo anterior*/
-    $$.dir=agregaCadena(stringT,chain); 
-    $$.dir=strlen(chain);
+        $$.tipo = $1.tipo;
+        /*expresion.dir = TablaDeCadenas.add(cadena)*/
+        //char *chain=creaCadena($1.sval);
+        /*La misma duda que en lo anterior*/
+        agregaCadena(stringT,$1.sval);
+        $$.dir=strlen($1.sval);
    }
 	 | ID LPAR parametros RPAR {
-/*if(buscar(stackTS->root,$1.sval)!=-1){
+        /*if(buscar(stackTS->root,$1.sval)!=-1){
          if(getTipoVar(stackTS->root,"func")!=-1){
            listParam *lista=getListParam(stackTS->root,$1.sval);
-           
+
            if(getNumListParam(lista)!=$3.num)
              yyerror("El numero de elementos no coincide");
            
@@ -803,9 +804,9 @@ expresion: expresion MAS expresion {
    ;
 
 variable: ID arreglo {
-  $$.dir=$2.dir;
-  $$.base=$2.base;
-  $$.tipo=$2.tipo;
+        $$.dir=$2.dir;
+        $$.base=$2.base;
+        $$.tipo=$2.tipo;
 }
 	| ID PUNTO ID {
         if (buscar(stackTS->root,$1.sval)!=-1){
@@ -826,9 +827,9 @@ variable: ID arreglo {
             yyerror("El id no es una estructura");
         }
         else
-          yyerror("El id no ha sido declarado");clarado");
+          yyerror("El id no ha sido declarado");
   }
-;
+  ;
 arreglo: ID LCOR expresion RCOR {
         if (buscar(stackTS->root,$1.sval)!=-1){
           int t=getTipo(stackTS->root,$1.sval);
@@ -853,9 +854,9 @@ arreglo: ID LCOR expresion RCOR {
         }
         else
           yyerror("El id no ha sido declarado");
-  }
+}
   | arreglo LCOR expresion RCOR {
-      if (buscar(stackTS->root,$1.sval)!=-1){
+        if (buscar(stackTS->root,$1.sval)!=-1){
           int t=getTipo(stackTS->root,$1.sval);
           if (t==7){
             $$.base=$1.base;
@@ -877,24 +878,29 @@ arreglo: ID LCOR expresion RCOR {
         }
         else
           yyerror("El arreglo no tiene tantas dimensiones");
-  }
-;
+      }
+  ;
 
-parametros: lista_param { $$.lista=$1.lista; }
+parametros: lista_param {$$.lista=$1.lista;}
 	  | /*vacia*/{$$.lista=NULL;}
-;
+    ;
 
 lista_param: lista_param COMA expresion {
-  $$.lista=$1.lista
-  add($$.lista,$1.tipo);
-  agrega_cuadrupla(codigoGbl,"param",$3.dir,"-","-");
+          $$.lista=$1.lista;
+          add($$.lista,$1.tipo);
+          char cadena[3];
+          sprintf(cadena,"%d", $3.dir);
+          agrega_cuadrupla(codigoGbl,"param",cadena,"-","-");
 }
 	   | expresion {
-       $$.lista=creaLP();
-       add($$.lista,$1.tipo);
-       agrega_cuadrupla(codigoGbl,"param",$1.dir,"-","-");
+          $$.lista=crearLP();
+          add($$.lista,$1.tipo);
+          char cadena[3];
+          sprintf(cadena,"%d", $1.dir);
+          agrega_cuadrupla(codigoGbl,"param",cadena,"-","-");
      }
-;
+     ;
+
 %%
 
 void yyerror(char *msg){
@@ -964,7 +970,7 @@ int reducir(int dir, int tipo1, int tipo2){
      else if(tipo1==0 && tipo2==1){
          temp=newTemp();
          sprintf(caux,"t%d",dir);
-         agrega_cuadrupla(codigoGbl,"=","(ent)",caux,temp);
+         agrega_cuadrupla(codigoGbl,"=","(int)",caux,temp);
          listarCode(codigoGbl);
          n=contadorTemp;
          return n;
@@ -973,7 +979,7 @@ int reducir(int dir, int tipo1, int tipo2){
      else if(tipo1==0 && tipo2==2){
          temp=newTemp();
          sprintf(caux,"t%d",dir);
-         agrega_cuadrupla(codigoGbl,"=","(ent)",caux,temp);
+         agrega_cuadrupla(codigoGbl,"=","(int)",caux,temp);
          listarCode(codigoGbl);
          n=contadorTemp;
          return n;
@@ -982,7 +988,7 @@ int reducir(int dir, int tipo1, int tipo2){
      else if(tipo1==1 && tipo2==2){
          temp=newTemp();
          sprintf(caux,"t%d",dir);
-         agrega_cuadrupla(codigoGbl,"=","(real)",caux,temp);
+         agrega_cuadrupla(codigoGbl,"=","(float)",caux,temp);
          listarCode(codigoGbl);
          n=contadorTemp;
          return n;
@@ -996,17 +1002,17 @@ int reducir(int dir, int tipo1, int tipo2){
 
 //Función para ampliar un tipo de dato
 int ampliar(int dir, int tipo1, int tipo2){
-	char *temp=(char*)malloc(45*sizeof(char));
-	char caux[3];
-	int n;
+  char *temp=(char*)malloc(45*sizeof(char));
+  char caux[3];
+  int n;
     if(tipo1==tipo2)
         return dir;
     //Comparamos ent y car
     else if((tipo1==0 && tipo2==3) || (tipo1==3 && tipo2==0)){
         temp = newTemp();
         sprintf(caux,"t%d",dir);
-        agrega_cuadrupla(codeGBL,"=","(ent)",caux,temp);
-        listarCode(codeGBL);
+        agrega_cuadrupla(codigoGbl,"=","(ent)",caux,temp);
+        listarCode(codigoGbl);
         n=contadorTemp;
         return n;
     }
@@ -1014,8 +1020,8 @@ int ampliar(int dir, int tipo1, int tipo2){
     else if((tipo1==0 && tipo2==1) || (tipo1==1 && tipo2==0)){
         temp = newTemp();
         sprintf(caux,"t%d",dir);
-        agrega_cuadrupla(codeGBL,"=","(real)",caux,temp);
-        listarCode(codeGBL);
+        agrega_cuadrupla(codigoGbl,"=","(real)",caux,temp);
+        listarCode(codigoGbl);
         n=contadorTemp;
         return n;
     }
@@ -1023,8 +1029,8 @@ int ampliar(int dir, int tipo1, int tipo2){
     else if((tipo1==0 && tipo2==2) || (tipo1==2 && tipo2==0)){
         temp = newTemp();
         sprintf(caux,"t%d",dir);
-        agrega_cuadrupla(codeGBL,"=","(dreal)",caux,temp);
-        listarCode(codeGBL);
+        agrega_cuadrupla(codigoGbl,"=","(dreal)",caux,temp);
+        listarCode(codigoGbl);
         n=contadorTemp;
         return n;
     }
@@ -1032,8 +1038,8 @@ int ampliar(int dir, int tipo1, int tipo2){
     else if((tipo1==1 && tipo2==2) || (tipo1==2 && tipo2==1)){
         temp = newTemp();
         sprintf(caux,"t%d",dir);
-        agrega_cuadrupla(codeGBL,"=","(dreal)",caux,temp);
-        listarCode(codeGBL);
+        agrega_cuadrupla(codigoGbl,"=","(dreal)",caux,temp);
+        listarCode(codigoGbl);
         n=contadorTemp;
         return n;
     }
